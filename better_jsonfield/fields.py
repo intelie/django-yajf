@@ -4,7 +4,6 @@ import json
 import django
 import inspect
 from django.db import models
-# from jsonfield.encoder import JSONEncoder
 
 
 class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
@@ -45,10 +44,6 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
 
         value = json.dumps(value, **self.dump_kwargs)
         return value
-        if self.PREFIX:
-            return '%s%s' % (self.PREFIX, value)
-        else:
-            return value
 
     def value_to_string(self, obj):
         value = self._get_value_from_obj(obj)

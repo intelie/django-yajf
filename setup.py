@@ -42,7 +42,7 @@ setup(
     packages=['better_jsonfield'],
     include_package_data=True,
     install_requires=['Django>=1.6'],
-    tests_require=['tox>=1.6.1', 'virtualenv>=1.11.1'],
+    tests_require=['tox>=1.6.1', 'virtualenv>=1.11.1', 'mock==1.0.1'],
     cmdclass={'test': TestCommand},
     classifiers=[
         'Framework :: Django',
