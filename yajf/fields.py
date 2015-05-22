@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
 import six
+import copy
 import json
 import django
 import inspect
 from django.db import models
+from .encoder import JSONEncoder
 
 
 class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
     MUST_CHECK_STACK = django.VERSION < (1, 8)
 
     def __init__(self, *args, **kwargs):
+        self.json = kwargs.pop('json_module', json)
+        self.load_kwargs = kwargs.pop('load_kwargs', {})
         self.dump_kwargs = kwargs.pop('dump_kwargs', {
-            # 'cls': JSONEncoder,
+            'cls': JSONEncoder,
             'separators': (',', ':')
         })
-        self.load_kwargs = kwargs.pop('load_kwargs', {})
 
         super(JSONField, self).__init__(*args, **kwargs)
 
@@ -22,6 +25,10 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return 'TextField'
 
     def to_python(self, value):
+        """Django<1.8 only; tries to infer
+        if value was retrieved from db and, if so,
+        converts it to a Python object"""
+
         if self.MUST_CHECK_STACK:
             stack = inspect.stack()
             retrieved_from_db = any(t[3] == '_fetch_all' for t in stack)
@@ -32,17 +39,20 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return value
 
     def from_db_value(self, value, *args, **kwargs):
-        return json.loads(value, **self.load_kwargs)
+        """Django 1.8 only, converts a JSON string to a Python object"""
+
+        return self.json.loads(value, **self.load_kwargs)
 
     def get_db_prep_value(self, value, connection, prepared=False):
         """Convert JSON object to a string"""
+
         if value is None and self.null:
             return None
 
         if isinstance(value, bytes):
             value = value.decode('utf-8')
 
-        value = json.dumps(value, **self.dump_kwargs)
+        value = self.json.dumps(value, **self.dump_kwargs)
         return value
 
     def value_to_string(self, obj):
