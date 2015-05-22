@@ -21,25 +21,23 @@ class TestCommand(Command):
                         'ENGINE': 'django.db.backends.sqlite3'
                     }
                 },
-                INSTALLED_APPS=('better_jsonfield',),
+                INSTALLED_APPS=('yajf',),
                 MIDDLEWARE_CLASSES=[]
         )
         from django.core.management import call_command
         import django
         if django.VERSION[:2] >= (1, 7):
             django.setup()
-        call_command('test', 'better_jsonfield')
+        call_command('test', 'yajf')
 
 
 setup(
-    name="better-jsonfield",
+    name="django-yajf",
     version="0.4",
-    url='https://github.com/intelie/jsonfield',
-    author='Vitor M. A. da Cruz',
-    author_email='vitor.mazzi@intelie.com.br',
-    description='',
-    long_description='',
-    packages=['better_jsonfield'],
+    url='https://github.com/intelie/django-yajf',
+    author='Lucas Sampaio',
+    author_email='lucas.sampaio@intelie.com.br',
+    description='Yet Another JSONField for Django',
     include_package_data=True,
     install_requires=['Django>=1.6'],
     tests_require=['tox>=1.6.1', 'virtualenv>=1.11.1', 'mock==1.0.1'],
