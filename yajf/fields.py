@@ -66,7 +66,7 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return self.dumps_for_display(obj)
 
     def dumps_for_display(self, value):
-        return json.dumps(value, **self.dump_kwargs)
+        return self.json.dumps(value, **self.dump_kwargs)
 
     def get_default(self):
         """
