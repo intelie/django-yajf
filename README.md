@@ -60,3 +60,12 @@ How to install and use
     # they'll be passed around between conversions, like
     # `json.loads(val, **self.load_kwargs)`:
     JSONField(load_kwargs={'cls': MyDecoder}, dump_kwargs={'cls': MyEncoder})
+
+Development
+-----------
+
+    git clone git@github.com:intelie/django-yajf.git
+    cd django-yajf
+    mkvirtualenv django-yajf
+    pip install virtualenv  # Otherwise tox will not be able to run
+    python setup.py test
