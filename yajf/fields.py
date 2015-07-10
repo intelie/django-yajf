@@ -56,7 +56,7 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return value
 
     def value_to_string(self, obj):
-        value = self._get_value_from_obj(obj)
+        value = self._get_val_from_obj(obj)
         return self.get_db_prep_value(value, None)
 
     def value_from_object(self, obj):
