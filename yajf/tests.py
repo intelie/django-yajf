@@ -58,9 +58,3 @@ class JSONFieldNonDictTestCase(TestCase):
             self.assertNotIn(mock.call('{"foo":"bar"}'), to_python.call_args_list)
             args, kwargs = from_db_value.call_args
             self.assertEqual(args[0], '{"foo":"bar"}')
-
-try:
-    from south.modelsinspector import add_introspection_rules
-    add_introspection_rules([], ["^yajf\.fields\.JSONField"])
-except ImportError:
-    pass

@@ -84,3 +84,9 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
             return copy.deepcopy(self.default)
         # If the field doesn't have a default, then we punt to models.Field.
         return super(JSONField, self).get_default()
+
+try:
+    from south.modelsinspector import add_introspection_rules
+    add_introspection_rules([], ["^yajf\.fields\.JSONField"])
+except ImportError:
+    pass
