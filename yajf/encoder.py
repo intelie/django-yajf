@@ -10,6 +10,20 @@ import decimal
 import uuid
 
 
+class FakeFloat(float):
+    """
+    Float subclass designed to hold Decimal values
+    and keep its precision to the json module.
+    """
+
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        s = str(self.value)
+        return s.rstrip('0').rstrip('.') if '.' in s else s
+
+
 class JSONEncoder(json.JSONEncoder):
     """
     JSONEncoder subclass that knows how to encode date/time/timedelta,
@@ -42,7 +56,7 @@ class JSONEncoder(json.JSONEncoder):
             return six.text_type(timedelta.total_seconds(obj))
         elif isinstance(obj, decimal.Decimal):
             # Serializers will coerce decimals to strings by default.
-            return float(obj)
+            return FakeFloat(obj)
         elif isinstance(obj, uuid.UUID):
             return six.text_type(obj)
         elif isinstance(obj, QuerySet):

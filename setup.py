@@ -46,7 +46,7 @@ def get_readme():
 
 setup(
     name="django-yajf",
-    version="0.4.3",
+    version="0.5.0",
     url='https://github.com/intelie/django-yajf',
     author='Lucas Sampaio',
     author_email='lucas.sampaio@intelie.com.br',

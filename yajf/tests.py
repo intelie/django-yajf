@@ -1,13 +1,22 @@
 # -*- coding: utf-8 -*-
 import mock
 import django
+from decimal import Decimal
 from django.db import models
 from django.test import TestCase
-from .fields import JSONField
+
+from .fields import JSONField, DecimalJSONField
+from .encoder import JSONEncoder
 
 
 class JsonModel(models.Model):
     value = JSONField()
+
+
+class CustomJsonModel(models.Model):
+    value = JSONField(load_kwargs={
+        'parse_float': lambda x: Decimal(x)
+    })
 
 
 class JSONFieldNonDictTestCase(TestCase):
@@ -58,3 +67,63 @@ class JSONFieldNonDictTestCase(TestCase):
             self.assertNotIn(mock.call('{"foo":"bar"}'), to_python.call_args_list)
             args, kwargs = from_db_value.call_args
             self.assertEqual(args[0], '{"foo":"bar"}')
+
+    def test_dumps_loads_helper_methods(self):
+        obj = {
+            'foo': {
+                'bar': 42
+            }
+        }
+
+        dumped = JSONField.dumps(obj)
+        self.assertEqual(JSONField.loads(dumped), obj)
+
+    def test_default_dumps_loads_kwargs(self):
+        self.assertEqual(JSONField.LOAD_KWARGS, {})
+        self.assertEqual(JSONField.DUMP_KWARGS, {
+            'cls': JSONEncoder,
+            'separators': (',', ':')
+        })
+
+    @mock.patch.object(JSONField, 'JSON_MODULE')
+    def test_field_uses_loads_and_dumps(self, mock_json):
+        JSONField.dumps({'foo': 'bar'})
+        mock_json.dumps.assert_called_with({'foo': 'bar'}, **JSONField.DUMP_KWARGS)
+
+        JSONField.loads('{"foo":"bar"}')
+        mock_json.loads.assert_called_with('{"foo":"bar"}', **JSONField.LOAD_KWARGS)
+
+    @mock.patch.object(JSONField, 'JSON_MODULE')
+    def test_override_default_settings(self, mock_json):
+        JSONField.dumps({'foo': 'bar'}, baz='quux')
+        mock_json.dumps.assert_called_with({'foo': 'bar'}, baz='quux')
+
+        JSONField.loads('{"foo":"bar"}', baz='quux')
+        mock_json.loads.assert_called_with('{"foo":"bar"}', baz='quux')
+
+    def test_decimal_precision_encoding(self):
+        v = Decimal(0.1 + 0.2)
+
+        dumped = JSONField.dumps(v)
+        self.assertEqual(dumped, str(v))
+
+        loaded = JSONField.loads(dumped)
+        self.assertEqual(loaded, float(v))  # loses precision
+
+    def test_decimal_json_field(self):
+        v = Decimal(0.1 + 0.2)
+
+        dumped = DecimalJSONField.dumps(v)
+        loaded = DecimalJSONField.loads(dumped)
+
+        self.assertIsInstance(loaded, Decimal)
+        self.assertEqual(loaded, v)
+
+    def test_custom_kwargs(self):
+        obj = CustomJsonModel.objects.create(value=Decimal(0.1 + 0.2))
+        new_obj = CustomJsonModel.objects.get(id=obj.id)
+        self.assertEqual(new_obj.value, Decimal(0.1 + 0.2))
+
+        obj = JsonModel.objects.create(value=Decimal(0.1 + 0.2))
+        new_obj = JsonModel.objects.get(id=obj.id)
+        self.assertEqual(new_obj.value, float(Decimal(0.1 + 0.2)))
