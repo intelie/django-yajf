@@ -61,11 +61,63 @@ How to install and use
     # `json.loads(val, **self.load_kwargs)`:
     JSONField(load_kwargs={'cls': MyDecoder}, dump_kwargs={'cls': MyEncoder})
 
+
+DecimalJSONField
+----------------
+
+Be default `JSONField` will dump any Decimal to a string before serializing,
+and it does so in order to not lose precision, but it still loads as a float.
+There's another field, `DecimalJSONField`, which loads any float-like value as
+a Decimal directly:
+
+    from decimal import Decimal
+    from yajf import DecimalJSONField
+
+    class MyModel(models.Model):
+        value = DecimalJSONField()
+
+    obj = MyModel()
+    obj.value = Decimal(0.1 + 0.2)  # will serialize and de-serialize as Decimal(0.3)
+
+Internally `DecimalJSONField` is just a simple `JSONField` with a predefined
+`load_kwargs`, so this is the exact implementation:
+
+    class DecimalJSONField(JSONField):
+        LOAD_KWARGS = {
+            'parse_float': lambda x: Decimal(x)
+        }
+
+
+Using *dumps* and *loads* directly from the field
+-------------------------------------------------
+
+Both of our field classes have two classmethods, `dumps` and `loads` that
+will call the related methos on the json module using the default arguments,
+so for example:
+
+    dumped = DecimalJSONField.dumps(Decimal(0.1 + 0.2))
+
+    # Is the same as calling:
+    dumped = json.dumps(Decimal(0.1 + 0.2), **DecimalJSONField.DUMP_KWARGS)
+
+    # actually, it's the same as:
+    dumped = DecimalJSONField.JSON_MODULE.dumps(Decimal(0.1 + 0.2), **DecimalJSONField.DUMP_KWARGS)
+    # but remember, `DecimalJSONField.JSON_MODULE = json` by default
+
+If you by any chance use a custom json module, you can call the methods with `**kwargs`
+and they'll ignore the default arguments:
+
+    dumped = DecimalJSONField.dumps(Decimal(0.1 + 0.2), foo="bar")
+
+    # is the same as
+    dumped = DecimalJSONField.JSON_MODULE.dumps(Decimal(0.1 + 0.2), foo="bar")
+    
+
 Development
 -----------
 
-    git clone git@github.com:intelie/django-yajf.git
-    cd django-yajf
-    mkvirtualenv django-yajf
-    pip install virtualenv  # Otherwise tox will not be able to run
-    python setup.py test
+    $ git clone git@github.com:intelie/django-yajf.git
+    $ cd django-yajf
+    $ mkvirtualenv django-yajf
+    $ pip install virtualenv  # Otherwise tox will not be able to run
+    $ python setup.py test

@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
-import six
+import functools
 import copy
 import json
 import inspect
-import functools
+from decimal import Decimal
 
 import django
 from django.db import models
+from django.utils import six
+
 from .encoder import JSONEncoder
 
-__all__ = ['JSONField']
+
+__all__ = ['JSONField', 'DecimalJSONField']
 
 
 if django.VERSION[:2] < (1, 8):
@@ -21,16 +24,44 @@ else:
 
 class JSONField(field_class(models.Field)):
     MUST_CHECK_STACK = django.VERSION < (1, 8)
+    JSON_MODULE = json
+    LOAD_KWARGS = {}
+    DUMP_KWARGS = {
+        'cls': JSONEncoder,
+        'separators': (',', ':')
+    }
 
     def __init__(self, *args, **kwargs):
-        self.json = kwargs.pop('json_module', json)
-        self.load_kwargs = kwargs.pop('load_kwargs', {})
-        self.dump_kwargs = kwargs.pop('dump_kwargs', {
-            'cls': JSONEncoder,
-            'separators': (',', ':')
-        })
+        if 'json_module' in kwargs:
+            self.JSON_MODULE = kwargs.pop('json_module')
+        if 'load_kwargs' in kwargs:
+            self.LOAD_KWARGS = kwargs.pop('load_kwargs')
+        if 'dump_kwargs' in kwargs:
+            self.DUMP_KWARGS = kwargs.pop('dump_kwargs')
 
         super(JSONField, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def loads(cls, dumped_obj, **kwargs):
+        """
+        Calls cls.JSON_MODULE.loads with kwargs or cls.LOAD_KWARGS
+        """
+
+        if not kwargs:
+            kwargs = cls.LOAD_KWARGS
+
+        return cls.JSON_MODULE.loads(dumped_obj, **kwargs)
+
+    @classmethod
+    def dumps(cls, obj, **kwargs):
+        """
+        Calls cls.JSON_MODULE.dumps with kwargs or cls.DUMP_KWARGS
+        """
+
+        if not kwargs:
+            kwargs = cls.DUMP_KWARGS
+
+        return cls.JSON_MODULE.dumps(obj, **kwargs)
 
     def get_internal_type(self):
         return 'TextField'
@@ -52,7 +83,7 @@ class JSONField(field_class(models.Field)):
     def from_db_value(self, value, *args, **kwargs):
         """Django 1.8 only, converts a JSON string to a Python object"""
 
-        return self.json.loads(value, **self.load_kwargs)
+        return self.loads(value)
 
     def get_db_prep_value(self, value, connection, prepared=False):
         """Convert JSON object to a string"""
@@ -63,7 +94,7 @@ class JSONField(field_class(models.Field)):
         if isinstance(value, bytes):
             value = value.decode('utf-8')
 
-        value = self.json.dumps(value, **self.dump_kwargs)
+        value = self.dumps(value)
         return value
 
     def value_to_string(self, obj):
@@ -77,7 +108,7 @@ class JSONField(field_class(models.Field)):
         return self.dumps_for_display(obj)
 
     def dumps_for_display(self, value):
-        return self.json.dumps(value, **self.dump_kwargs)
+        return self.dumps(value)
 
     def get_default(self):
         """
@@ -96,8 +127,21 @@ class JSONField(field_class(models.Field)):
         # If the field doesn't have a default, then we punt to models.Field.
         return super(JSONField, self).get_default()
 
+
+class DecimalJSONField(JSONField):
+    """
+    Custom field that dumps decimals as strings to keep precision and
+    loads all floats as Decimals.
+    """
+
+    LOAD_KWARGS = {
+        'parse_float': lambda x: Decimal(x)
+    }
+
+
 try:
     from south.modelsinspector import add_introspection_rules
     add_introspection_rules([], ["^yajf\.fields\.JSONField"])
+    add_introspection_rules([], ["^yajf\.fields\.DecimalJSONField"])
 except ImportError:
     pass
