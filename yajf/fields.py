@@ -2,13 +2,24 @@
 import six
 import copy
 import json
-import django
 import inspect
+import functools
+
+import django
 from django.db import models
 from .encoder import JSONEncoder
 
+__all__ = ['JSONField']
 
-class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
+
+if django.VERSION[:2] < (1, 8):
+    from django.db.models import SubfieldBase
+    field_class = functools.partial(six.with_metaclass, SubfieldBase)
+else:
+    field_class = functools.partial(six.with_metaclass, type)
+
+
+class JSONField(field_class(models.Field)):
     MUST_CHECK_STACK = django.VERSION < (1, 8)
 
     def __init__(self, *args, **kwargs):
